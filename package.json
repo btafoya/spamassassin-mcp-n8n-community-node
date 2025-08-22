@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-spamassassin-mcp",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "n8n community node for SpamAssassin MCP server integration",
   "keywords": [
     "n8n-community-node-package",
