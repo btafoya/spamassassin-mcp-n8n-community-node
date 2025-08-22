@@ -11,7 +11,7 @@ echo "Current version: $CURRENT_VERSION"
 VERSION_PART=${1:-patch}
 
 # Use npm to increment the version
-NEW_VERSION=$(npm version $VERSION_PART --json | jq -r '.version')
+NEW_VERSION=$(npm version $VERSION_PART | sed 's/v//')
 
 echo "New version: $NEW_VERSION"
 
