@@ -1,0 +1,143 @@
+{
+  "name": "Email Spam Analysis Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a8b5c3d1-2e4f-6789-abcd-ef0123456789",
+      "name": "When clicking \"Execute workflow\"",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "scan_email",
+        "emailContent": "Subject: Urgent: You've Won $1,000,000!\nFrom: winner@suspicious-domain.com\nTo: victim@example.com\n\nCongratulations! You are the lucky winner of our grand prize!\nClick here immediately to claim your $1,000,000 prize!\n\nDon't wait - this offer expires in 24 hours!\n\nBest regards,\nThe Prize Team",
+        "includeHeaders": true,
+        "analysisLevel": "detailed"
+      },
+      "id": "b9c6d4e2-3f5a-789b-bcde-f01234567890",
+      "name": "SpamAssassin Scan",
+      "type": "n8n-nodes-spamassassin-mcp.spamAssassinMcp",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "spamAssassinMcpApi": {
+          "id": "1",
+          "name": "SpamAssassin MCP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.scanResult.is_spam}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "c0d7e5f3-4061-890c-cdef-012345678901",
+      "name": "Is Spam?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "quarantine"
+            },
+            {
+              "name": "reason",
+              "value": "Email identified as spam with score {{$node[\"SpamAssassin Scan\"].json.scanResult.spam_score}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d1e8f6a4-5172-901d-defa-123456789012",
+      "name": "Quarantine Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "deliver"
+            },
+            {
+              "name": "reason",
+              "value": "Email is safe with score {{$node[\"SpamAssassin Scan\"].json.scanResult.spam_score}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e2f9a7b5-6283-012e-efab-234567890123",
+      "name": "Deliver Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [880, 400]
+    }
+  ],
+  "connections": {
+    "When clicking \"Execute workflow\"": {
+      "main": [
+        [
+          {
+            "node": "SpamAssassin Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SpamAssassin Scan": {
+      "main": [
+        [
+          {
+            "node": "Is Spam?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Spam?": {
+      "main": [
+        [
+          {
+            "node": "Quarantine Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Deliver Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "a0b1c2d3-e4f5-6789-0123-456789abcdef",
+  "id": "123",
+  "meta": {
+    "created": "2024-01-15T10:00:00.000Z",
+    "updated": "2024-01-15T10:00:00.000Z"
+  }
+}
