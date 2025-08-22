@@ -39,7 +39,7 @@ export interface SpamScanResult {
 	analysis_time_ms: number;
 	headers_analyzed?: boolean;
 	details?: {
-		[key: string]: any;
+		[key: string]: unknown;
 	};
 }
 
@@ -100,6 +100,6 @@ export interface ScoreExplanation {
 export type SpamAssassinOperation = 'scan_email' | 'check_reputation' | 'test_rules' | 'explain_score';
 
 export interface McpToolResponse {
-	content: SpamScanResult | ReputationResult | RuleTestResult | ScoreExplanation;
+	content: SpamScanResult | ReputationResult | RuleTestResult | ScoreExplanation | Record<string, unknown>;
 	isError?: boolean;
 }

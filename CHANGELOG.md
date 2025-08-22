@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] - 2025-08-22
+
+### Fixed
+- Resolved "EventSource is not defined" error when using HTTP/SSE connection type
+- Added event-source-polyfill for Node.js environments
+- Improved type safety by replacing `any` types with more specific types
+- Enhanced error handling in MCP client connections
+
 ## [1.0.0] - 2024-01-15
 
 ### Added

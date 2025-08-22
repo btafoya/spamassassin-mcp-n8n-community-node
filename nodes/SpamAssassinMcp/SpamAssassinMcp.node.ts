@@ -11,6 +11,10 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
+// EventSource polyfill for Node.js environment
+import { EventSourcePolyfill } from 'event-source-polyfill';
+globalThis.EventSource = EventSourcePolyfill as any;
+
 export class SpamAssassinMcp implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'SpamAssassin MCP',
@@ -267,7 +271,7 @@ export class SpamAssassinMcp implements INodeType {
 				const operation = this.getNodeParameter('operation', itemIndex) as string;
 
 				try {
-					let result: any;
+					let result: Record<string, unknown>;
 
 					switch (operation) {
 						case 'scan_email':
