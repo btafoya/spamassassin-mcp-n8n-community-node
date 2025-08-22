@@ -289,4 +289,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - 📚 [Documentation](https://github.com/btafoya/spamassassin-mcp-n8n-community-node/docs)
 - 🐛 [Bug Reports](https://github.com/btafoya/spamassassin-mcp-n8n-community-node/issues)
 - 💬 [Discussions](https://github.com/btafoya/spamassassin-mcp-n8n-community-node/discussions)
-- 📧 Email: btafoya@example.com
+- 📧 Email: btafoya@briantafoya.com

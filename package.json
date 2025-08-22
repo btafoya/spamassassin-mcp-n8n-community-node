@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-spamassassin-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "n8n community node for SpamAssassin MCP server integration",
   "keywords": [
     "n8n-community-node-package",
@@ -13,8 +13,8 @@
   "license": "MIT",
   "homepage": "https://github.com/btafoya/spamassassin-mcp-n8n-community-node",
   "author": {
-    "name": "Brandon Tafoya",
-    "email": "btafoya@example.com"
+    "name": "Brian Tafoya",
+    "email": "btafoya@briantafoya.com"
   },
   "repository": {
     "type": "git",
