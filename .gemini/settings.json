@@ -1,0 +1,88 @@
+{
+    "mcpServers": {
+        "filesystem": {
+            "command": "npx",
+            "type": "stdio",
+            "trust": true,
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-filesystem",
+                "/home/btafoya"
+            ]
+        },
+        "context7": {
+            "type": "stdio",
+            "command": "npx",
+            "trust": true,
+            "args": [
+                "-y",
+                "@upstash/context7-mcp"
+            ],
+            "env": {}
+        },
+        "serena": {
+            "command": "uvx",
+            "type": "stdio",
+            "trust": true,
+            "args": [
+                "--from",
+                "git+https://github.com/oraios/serena",
+                "serena",
+                "start-mcp-server",
+                "--context",
+                "codex"
+            ]
+        },
+        "github": {
+            "command": "docker",
+            "type": "stdio",
+            "trust": true,
+            "args": [
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                "GITHUB_PERSONAL_ACCESS_TOKEN",
+                "ghcr.io/github/github-mcp-server"
+            ],
+            "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+            }
+        },
+        "sequential-thinking": {
+            "type": "stdio",
+            "command": "npx",
+            "trust": true,
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-sequential-thinking"
+            ]
+        },
+        "n8n-mcp": {
+            "type": "stdio",
+            "command": "npx",
+            "trust": true,
+            "args": [
+                "n8n-mcp"
+            ],
+            "env": {
+                "MCP_MODE": "stdio",
+                "LOG_LEVEL": "error",
+                "DISABLE_CONSOLE_OUTPUT": "true",
+                "N8N_API_URL": "${N8N_API_URL}",
+                "N8N_API_KEY": "${N8N_API_KEY}"
+            }
+        },
+        "Ref": {
+            "command": "npx",
+            "type": "stdio",
+            "trust": true,
+            "args": [
+                "ref-tools-mcp@latest"
+            ],
+            "env": {
+                "REF_API_KEY": "${REF_API_KEY}"
+            }
+        }
+    }
+}
