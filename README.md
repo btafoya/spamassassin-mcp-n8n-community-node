@@ -3,6 +3,10 @@
 An n8n community node that integrates with the [SpamAssassin MCP server](https://github.com/btafoya/spamassassin-mcp) to provide powerful email spam analysis capabilities within your n8n workflows.
 
 [![Publish to npm](https://github.com/btafoya/spamassassin-mcp-n8n-community-node/actions/workflows/publish.yml/badge.svg)](https://github.com/btafoya/spamassassin-mcp-n8n-community-node/actions/workflows/publish.yml)
+[![npm version](https://img.shields.io/npm/v/n8n-nodes-spamassassin-mcp.svg)](https://www.npmjs.com/package/n8n-nodes-spamassassin-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![n8n](https://img.shields.io/badge/n8n-community%20node-blue)](https://n8n.io)
+[![SpamAssassin](https://img.shields.io/badge/SpamAssassin-MCP-orange)](https://spamassassin.apache.org/)
 
 ## Features
 
