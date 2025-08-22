@@ -107,6 +107,10 @@
       "env": {
         "REF_API_KEY": "${REF_API_KEY}"
       }
+    },
+    "mcp-ssh": {
+      "command": "npx",
+      "args": ["@aiondadotcom/mcp-ssh"]
     }
   }
 }
