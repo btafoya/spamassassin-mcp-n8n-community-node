@@ -1,0 +1,290 @@
+{
+  "name": "SpamAssassin MCP Test Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "spamassassin-test",
+        "responseMode": "onReceived",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Email Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "webhookId": "spamassassin-test"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse incoming email data\nconst emailData = $input.first();\n\n// Handle both JSON body and form data\nlet emailContent, subject, sender;\n\nif (emailData.body && typeof emailData.body === 'object') {\n  emailContent = emailData.body.email || emailData.body.content;\n  subject = emailData.body.subject || 'Test Email';\n  sender = emailData.body.sender || emailData.body.from || 'test@example.com';\n} else {\n  // If raw body, treat as email content\n  emailContent = emailData.body || $('Webhook').first().json.body;\n  subject = 'Test Email';\n  sender = 'test@example.com';\n}\n\n// Default test email if nothing provided\nif (!emailContent) {\n  emailContent = `Subject: Test Email\nFrom: test@example.com\nTo: recipient@example.com\n\nThis is a test email for SpamAssassin scanning.\nIt contains normal content and should be classified as HAM (not spam).`;\n}\n\nreturn {\n  email: emailContent,\n  subject: subject,\n  sender: sender,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "prepare-email",
+      "name": "Prepare Email Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "email": "={{ $json.email }}",
+        "options": {
+          "includeReport": true,
+          "includeHeaders": true
+        }
+      },
+      "id": "spamassassin-scan",
+      "name": "SpamAssassin Scan",
+      "type": "n8n-nodes-spamassassin-mcp.spamAssassinMcp",
+      "typeVersion": 1.0,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "spam-check",
+              "leftValue": "={{ $json.is_spam }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "spam-classifier",
+      "name": "Is Spam?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle SPAM emails\nconst scanResult = $input.first();\n\nreturn {\n  classification: 'SPAM',\n  score: scanResult.score,\n  threshold: scanResult.required_score,\n  confidence: scanResult.score >= scanResult.required_score ? 'HIGH' : 'MEDIUM',\n  details: scanResult.report || 'Spam detected by SpamAssassin',\n  action: 'BLOCK',\n  timestamp: new Date().toISOString(),\n  original_email: scanResult.email || 'No email content',\n  spam_tests: scanResult.tests_hit || [],\n  recommendation: 'Block this email - identified as spam'\n};"
+      },
+      "id": "spam-handler",
+      "name": "Handle Spam",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle HAM (legitimate) emails\nconst scanResult = $input.first();\n\nreturn {\n  classification: 'HAM',\n  score: scanResult.score,\n  threshold: scanResult.required_score,\n  confidence: scanResult.score < scanResult.required_score ? 'HIGH' : 'LOW',\n  details: scanResult.report || 'Email appears legitimate',\n  action: 'ALLOW',\n  timestamp: new Date().toISOString(),\n  original_email: scanResult.email || 'No email content',\n  spam_tests: scanResult.tests_hit || [],\n  recommendation: 'Allow this email - appears legitimate'\n};"
+      },
+      "id": "ham-handler",
+      "name": "Handle Ham",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-SpamAssassin-Classification",
+                "value": "={{ $json.classification }}"
+              },
+              {
+                "name": "X-SpamAssassin-Score",
+                "value": "={{ $json.score }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "response-spam",
+      "name": "Spam Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-SpamAssassin-Classification",
+                "value": "={{ $json.classification }}"
+              },
+              {
+                "name": "X-SpamAssassin-Score",
+                "value": "={{ $json.score }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "response-ham",
+      "name": "Ham Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handler for SpamAssassin failures\nconst error = $input.first();\n\nreturn {\n  classification: 'ERROR',\n  error: error.error || 'SpamAssassin scan failed',\n  score: null,\n  threshold: null,\n  action: 'MANUAL_REVIEW',\n  timestamp: new Date().toISOString(),\n  recommendation: 'Manual review required - scanner unavailable'\n};"
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-SpamAssassin-Status",
+                "value": "ERROR"
+              }
+            ]
+          }
+        }
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 500]
+    }
+  ],
+  "connections": {
+    "Email Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Email Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Email Data": {
+      "main": [
+        [
+          {
+            "node": "SpamAssassin Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SpamAssassin Scan": {
+      "main": [
+        [
+          {
+            "node": "Is Spam?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Spam?": {
+      "main": [
+        [
+          {
+            "node": "Handle Spam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Ham",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Spam": {
+      "main": [
+        [
+          {
+            "node": "Spam Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Ham": {
+      "main": [
+        [
+          {
+            "node": "Ham Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "spamassassin-test-workflow"
+}
