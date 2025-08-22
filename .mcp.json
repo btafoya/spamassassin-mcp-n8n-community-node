@@ -112,5 +112,16 @@
       "command": "npx",
       "args": ["@aiondadotcom/mcp-ssh"]
     }
+  },
+  "commands": {
+    "create-release": {
+      "command": "./scripts/release.sh",
+      "description": "Create and publish a new release with version tag",
+      "args": ["${tag}"],
+      "validation": {
+        "allowedValues": ["major", "minor", "patch"]
+      },
+      "example": "claude release patch"
+    }
   }
 }
