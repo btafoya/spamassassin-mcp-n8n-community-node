@@ -28,7 +28,10 @@
     "format": "prettier --write .",
     "lint": "eslint **/*.ts",
     "lintfix": "eslint nodes credentials --fix",
-    "prepublishOnly": "npm run build && npm run lint -s"
+    "prepublishOnly": "npm run build && npm run lint -s",
+    "release": "bash scripts/release.sh",
+    "release:minor": "bash scripts/release.sh minor",
+    "release:major": "bash scripts/release.sh major"
   },
   "files": [
     "dist"
