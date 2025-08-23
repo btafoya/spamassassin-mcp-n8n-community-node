@@ -1,0 +1,32 @@
+{
+  "name": "spamassassin-http-wrapper",
+  "version": "1.0.0",
+  "description": "HTTP wrapper service for SpamAssassin MCP server integration with n8n",
+  "main": "spamassassin-http-wrapper.js",
+  "scripts": {
+    "start": "node spamassassin-http-wrapper.js",
+    "dev": "nodemon spamassassin-http-wrapper.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "keywords": [
+    "spamassassin",
+    "mcp",
+    "n8n",
+    "email",
+    "spam",
+    "filter",
+    "wrapper"
+  ],
+  "author": "Claude Code",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

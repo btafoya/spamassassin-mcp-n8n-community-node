@@ -1,0 +1,28 @@
+FROM node:18-alpine
+
+# Install necessary packages
+RUN apk add --no-cache docker-cli
+
+WORKDIR /app
+
+# Copy package files
+COPY wrapper-package.json package.json
+COPY spamassassin-http-wrapper.js .
+
+# Install dependencies
+RUN npm install
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+USER nextjs
+
+# Expose port
+EXPOSE 9000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "const http=require('http');const options={hostname:'localhost',port:9000,path:'/health',timeout:2000};const req=http.get(options,(res)=>{if(res.statusCode===200){console.log('OK');process.exit(0);}else{process.exit(1);}});req.on('error',()=>{process.exit(1);});req.on('timeout',()=>{req.destroy();process.exit(1);});"
+
+# Start the service
+CMD ["npm", "start"]

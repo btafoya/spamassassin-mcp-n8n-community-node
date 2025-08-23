@@ -43,21 +43,59 @@
       ]
     },
     {
-      "parameters": {},
-      "id": "spamassassin-scan",
-      "name": "SpamAssassin Scan",
-      "type": "n8n-nodes-spamassassin-mcp.spamAssassinMcp",
-      "typeVersion": 1,
+      "parameters": {
+        "method": "POST",
+        "url": "http://spamassassin-http-wrapper:9000/analyze",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{$json.email}}"
+            },
+            {
+              "name": "subject",
+              "value": "={{$json.subject}}"
+            },
+            {
+              "name": "sender", 
+              "value": "={{$json.sender}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "retry": {
+            "enabled": true,
+            "maxAttempts": 3,
+            "waitBetween": 1000
+          },
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": false
+            }
+          }
+        }
+      },
+      "id": "spamassassin-http-scan",
+      "name": "SpamAssassin HTTP Scan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         688,
         384
       ],
-      "credentials": {
-        "spamAssassinMcpApi": {
-          "id": "TkG7nIcTjIpntOkW",
-          "name": "SpamAssassin MCP account"
-        }
-      }
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -69,13 +107,13 @@
           },
           "conditions": [
             {
-              "id": "spam-check",
-              "leftValue": "={{ $json.is_spam }}",
-              "rightValue": true,
+              "id": "classification-check",
+              "leftValue": "={{ $json.classification }}",
+              "rightValue": "SPAM",
               "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
+                "type": "string",
+                "operation": "equals",
+                "caseSensitive": true
               }
             }
           ],
@@ -83,7 +121,7 @@
         },
         "options": {}
       },
-      "id": "spam-classifier",
+      "id": "spam-filter",
       "name": "Is Spam?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -94,133 +132,83 @@
     },
     {
       "parameters": {
-        "jsCode": "// Handle SPAM emails\nconst scanResult = $input.first();\n\nreturn {\n  classification: 'SPAM',\n  score: scanResult.score,\n  threshold: scanResult.required_score,\n  confidence: scanResult.score >= scanResult.required_score ? 'HIGH' : 'MEDIUM',\n  details: scanResult.report || 'Spam detected by SpamAssassin',\n  action: 'BLOCK',\n  timestamp: new Date().toISOString(),\n  original_email: scanResult.email || 'No email content',\n  spam_tests: scanResult.tests_hit || [],\n  recommendation: 'Block this email - identified as spam'\n};"
+        "jsCode": "// Handle SPAM classification\nconst result = $input.first();\n\nreturn {\n  status: 'BLOCKED',\n  classification: result.classification,\n  score: result.score,\n  threshold: result.threshold,\n  confidence: result.confidence,\n  action: result.action,\n  recommendation: result.recommendation,\n  method: result.method || 'HTTP',\n  details: result.details || [],\n  timestamp: new Date().toISOString(),\n  message: `Email blocked: ${result.recommendation}`\n};"
       },
-      "id": "spam-handler",
-      "name": "Handle Spam",
+      "id": "block-spam",
+      "name": "Block SPAM",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
-        288
+        1136,
+        304
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Handle HAM (legitimate) emails\nconst scanResult = $input.first();\n\nreturn {\n  classification: 'HAM',\n  score: scanResult.score,\n  threshold: scanResult.required_score,\n  confidence: scanResult.score < scanResult.required_score ? 'HIGH' : 'LOW',\n  details: scanResult.report || 'Email appears legitimate',\n  action: 'ALLOW',\n  timestamp: new Date().toISOString(),\n  original_email: scanResult.email || 'No email content',\n  spam_tests: scanResult.tests_hit || [],\n  recommendation: 'Allow this email - appears legitimate'\n};"
+        "jsCode": "// Handle HAM (legitimate email) classification\nconst result = $input.first();\n\nreturn {\n  status: 'ALLOWED',\n  classification: result.classification,\n  score: result.score,\n  threshold: result.threshold,\n  confidence: result.confidence,\n  action: result.action,\n  recommendation: result.recommendation,\n  method: result.method || 'HTTP',\n  details: result.details || [],\n  timestamp: new Date().toISOString(),\n  message: `Email allowed: ${result.recommendation}`\n};"
       },
-      "id": "ham-handler",
-      "name": "Handle Ham",
+      "id": "allow-ham",
+      "name": "Allow HAM",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
-        480
+        1136,
+        464
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ $json }}",
-        "options": {
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "X-SpamAssassin-Classification",
-                "value": "={{ $json.classification }}"
-              },
-              {
-                "name": "X-SpamAssassin-Score",
-                "value": "={{ $json.score }}"
-              }
-            ]
-          }
-        }
+        "responseBody": "={{ $json }}"
       },
-      "id": "response-spam",
-      "name": "Spam Response",
+      "id": "respond-blocked",
+      "name": "Respond: Blocked",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1344,
-        288
+        1360,
+        304
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ $json }}",
-        "options": {
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "X-SpamAssassin-Classification",
-                "value": "={{ $json.classification }}"
-              },
-              {
-                "name": "X-SpamAssassin-Score",
-                "value": "={{ $json.score }}"
-              }
-            ]
-          }
-        }
+        "responseBody": "={{ $json }}"
       },
-      "id": "response-ham",
-      "name": "Ham Response",
+      "id": "respond-allowed",
+      "name": "Respond: Allowed", 
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1344,
-        480
+        1360,
+        464
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Error handler for SpamAssassin failures\nconst error = $input.first();\n\nreturn {\n  classification: 'ERROR',\n  error: error.error || 'SpamAssassin scan failed',\n  score: null,\n  threshold: null,\n  action: 'MANUAL_REVIEW',\n  timestamp: new Date().toISOString(),\n  recommendation: 'Manual review required - scanner unavailable'\n};"
+        "jsCode": "// Handle scan errors\nconst error = $input.first();\n\nreturn {\n  status: 'ERROR',\n  classification: 'UNKNOWN',\n  error: error.error || 'Scan failed',\n  message: 'Email scanning failed - allowing by default for safety',\n  action: 'ALLOW',\n  recommendation: 'Manual review recommended',\n  timestamp: new Date().toISOString(),\n  fallback: true\n};"
       },
-      "id": "error-handler",
-      "name": "Error Handler",
+      "id": "handle-error",
+      "name": "Handle Scan Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        688,
-        592
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ $json }}",
-        "options": {
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "X-SpamAssassin-Status",
-                "value": "ERROR"
-              }
-            ]
-          }
-        }
-      },
-      "id": "error-response",
-      "name": "Error Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
       "position": [
         912,
-        592
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-error",
+      "name": "Respond: Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1136,
+        544
       ]
     }
   ],
@@ -251,14 +239,14 @@
       "main": [
         [
           {
-            "node": "SpamAssassin Scan",
+            "node": "SpamAssassin HTTP Scan",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "SpamAssassin Scan": {
+    "SpamAssassin HTTP Scan": {
       "main": [
         [
           {
@@ -269,7 +257,7 @@
         ],
         [
           {
-            "node": "Error Handler",
+            "node": "Handle Scan Error",
             "type": "main",
             "index": 0
           }
@@ -280,47 +268,47 @@
       "main": [
         [
           {
-            "node": "Handle Spam",
+            "node": "Block SPAM",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Handle Ham",
+            "node": "Allow HAM",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Handle Spam": {
+    "Block SPAM": {
       "main": [
         [
           {
-            "node": "Spam Response",
+            "node": "Respond: Blocked",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Handle Ham": {
+    "Allow HAM": {
       "main": [
         [
           {
-            "node": "Ham Response",
+            "node": "Respond: Allowed",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Error Handler": {
+    "Handle Scan Error": {
       "main": [
         [
           {
-            "node": "Error Response",
+            "node": "Respond: Error",
             "type": "main",
             "index": 0
           }
@@ -329,8 +317,19 @@
     }
   },
   "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "d71efd07c31ee3ad26e4f5b948064e8830e3370de6629e631ccf7314be793ab4"
-  }
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-08-23T17:00:00.000Z",
+      "updatedAt": "2025-08-23T17:00:00.000Z",
+      "id": "email-security",
+      "name": "Email Security"
+    }
+  ],
+  "triggerCount": 2,
+  "updatedAt": "2025-08-23T17:00:00.000Z",
+  "versionId": "http-wrapper-v1"
 }
