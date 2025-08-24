@@ -9,9 +9,7 @@
             }
           ]
         },
-        "simple": false,
-        "filters": {},
-        "options": {}
+        "filters": {}
       },
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.3,
@@ -30,7 +28,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Comprehensive Gmail message parsing for SpamAssassin analysis\nconst gmailMessage = $input.first();\nconsole.log('Gmail message received:', JSON.stringify(gmailMessage, null, 2));\n\nlet emailContent, subject, sender, messageId, recipient, headers, attachments, messageDate, mimeType, size;\n\n// Extract Gmail message data\nif (gmailMessage && gmailMessage.json) {\n  const messageData = gmailMessage.json;\n  \n  // Extract basic message info\n  messageId = messageData.id || messageData.messageId;\n  subject = messageData.subject || 'No Subject';\n  size = messageData.sizeEstimate || 0;\n  \n  // Extract headers for comprehensive analysis\n  headers = {};\n  if (messageData.payload && messageData.payload.headers) {\n    messageData.payload.headers.forEach(header => {\n      headers[header.name.toLowerCase()] = header.value;\n    });\n    \n    // Extract key header information\n    sender = headers['from'] || 'unknown@sender.com';\n    recipient = headers['to'] || headers['delivered-to'] || 'unknown@recipient.com';\n    messageDate = headers['date'] || new Date().toISOString();\n    mimeType = headers['content-type'] || 'text/plain';\n  } else {\n    // Fallback extraction\n    sender = messageData.from || 'unknown@sender.com';\n    recipient = messageData.to || 'unknown@recipient.com';\n    messageDate = messageData.internalDate ? new Date(parseInt(messageData.internalDate)).toISOString() : new Date().toISOString();\n  }\n  \n  // Extract attachments information\n  attachments = [];\n  if (messageData.payload && messageData.payload.parts) {\n    messageData.payload.parts.forEach(part => {\n      if (part.filename && part.filename.length > 0) {\n        attachments.push({\n          filename: part.filename,\n          mimeType: part.mimeType,\n          size: part.body ? part.body.size : 0\n        });\n      }\n    });\n  }\n  \n  // Build comprehensive email content with full headers\n  let fullEmailContent = '';\n  \n  // Add essential headers for SpamAssassin analysis\n  if (headers['message-id']) fullEmailContent += `Message-ID: ${headers['message-id']}\\n`;\n  if (headers['date']) fullEmailContent += `Date: ${headers['date']}\\n`;\n  fullEmailContent += `From: ${sender}\\n`;\n  fullEmailContent += `To: ${recipient}\\n`;\n  fullEmailContent += `Subject: ${subject}\\n`;\n  if (headers['content-type']) fullEmailContent += `Content-Type: ${headers['content-type']}\\n`;\n  if (headers['received']) fullEmailContent += `Received: ${headers['received']}\\n`;\n  if (headers['return-path']) fullEmailContent += `Return-Path: ${headers['return-path']}\\n`;\n  if (headers['x-mailer']) fullEmailContent += `X-Mailer: ${headers['x-mailer']}\\n`;\n  if (headers['x-originating-ip']) fullEmailContent += `X-Originating-IP: ${headers['x-originating-ip']}\\n`;\n  \n  // Add other important headers that SpamAssassin analyzes\n  Object.keys(headers).forEach(key => {\n    if (['received', 'x-received', 'authentication-results', 'dkim-signature', 'arc-seal', 'arc-message-signature'].includes(key)) {\n      fullEmailContent += `${key.charAt(0).toUpperCase() + key.slice(1)}: ${headers[key]}\\n`;\n    }\n  });\n  \n  fullEmailContent += '\\n'; // Separate headers from body\n  \n  // Extract message body content\n  let bodyContent = '';\n  if (messageData.payload) {\n    const payload = messageData.payload;\n    \n    // Handle different message structures\n    if (payload.body && payload.body.data) {\n      // Simple message with body data\n      try {\n        bodyContent = Buffer.from(payload.body.data, 'base64').toString('utf8');\n      } catch (e) {\n        console.log('Could not decode base64 body, using snippet');\n        bodyContent = messageData.snippet || 'Content decoding failed';\n      }\n    } else if (payload.parts) {\n      // Multi-part message - find text/plain or text/html part\n      let textPart = payload.parts.find(part => \n        part.mimeType === 'text/plain'\n      );\n      \n      // If no plain text, try HTML\n      if (!textPart) {\n        textPart = payload.parts.find(part => \n          part.mimeType === 'text/html'\n        );\n      }\n      \n      if (textPart && textPart.body && textPart.body.data) {\n        try {\n          bodyContent = Buffer.from(textPart.body.data, 'base64').toString('utf8');\n        } catch (e) {\n          console.log('Could not decode multi-part body, using snippet');\n          bodyContent = messageData.snippet || 'Content decoding failed';\n        }\n      } else {\n        bodyContent = messageData.snippet || 'No readable content found';\n      }\n    } else {\n      bodyContent = messageData.snippet || 'No content available';\n    }\n  } else {\n    bodyContent = messageData.snippet || 'No payload available';\n  }\n  \n  // Combine headers and body for complete email\n  emailContent = fullEmailContent + bodyContent;\n  \n} else {\n  // Fallback for unexpected data format\n  messageId = 'unknown';\n  subject = 'Gmail Parse Error';\n  sender = 'unknown@gmail.com';\n  recipient = 'unknown@recipient.com';\n  messageDate = new Date().toISOString();\n  headers = {};\n  attachments = [];\n  size = 0;\n  emailContent = `Subject: ${subject}\\nFrom: ${sender}\\n\\nError parsing Gmail message data`;\n}\n\nconsole.log('Processed comprehensive Gmail data:', { \n  messageId, \n  subject, \n  sender, \n  recipient,\n  attachmentCount: attachments.length,\n  size,\n  headerCount: Object.keys(headers).length,\n  contentLength: emailContent.length \n});\n\nreturn {\n  messageId: messageId,\n  email: emailContent,\n  subject: subject,\n  sender: sender,\n  recipient: recipient,\n  date: messageDate,\n  headers: headers,\n  attachments: attachments,\n  size: size,\n  mimeType: mimeType,\n  attachmentCount: attachments.length,\n  timestamp: new Date().toISOString(),\n  source: 'gmail'\n};"
+        "jsCode": "// Gmail message data parsing for SpamAssassin analysis\nconst gmailMessage = $input.first();\nconsole.log('Gmail message received:', JSON.stringify(gmailMessage, null, 2));\n\nlet emailContent, subject, sender, messageId;\n\n// Extract Gmail message data\nif (gmailMessage && gmailMessage.json) {\n  const messageData = gmailMessage.json;\n  \n  // Extract basic message info\n  messageId = messageData.id || messageData.messageId;\n  subject = messageData.subject || 'No Subject';\n  \n  // Extract sender - Gmail provides this in different formats\n  sender = messageData.from || \n           (messageData.payload && messageData.payload.headers && \n            messageData.payload.headers.find(h => h.name.toLowerCase() === 'from')?.value) ||\n           'unknown@sender.com';\n  \n  // Extract email content - Gmail message can have different structures\n  if (messageData.snippet) {\n    // Use snippet as fallback content\n    emailContent = `Subject: ${subject}\\nFrom: ${sender}\\n\\n${messageData.snippet}`;\n  }\n  \n  // Try to get full message body if available\n  if (messageData.payload) {\n    const payload = messageData.payload;\n    \n    // Handle different message structures\n    if (payload.body && payload.body.data) {\n      // Simple message with body data\n      try {\n        emailContent = Buffer.from(payload.body.data, 'base64').toString('utf8');\n      } catch (e) {\n        console.log('Could not decode base64 body, using snippet');\n      }\n    } else if (payload.parts) {\n      // Multi-part message - find text/plain or text/html part\n      let textPart = payload.parts.find(part => \n        part.mimeType === 'text/plain' || part.mimeType === 'text/html'\n      );\n      \n      if (textPart && textPart.body && textPart.body.data) {\n        try {\n          const decodedContent = Buffer.from(textPart.body.data, 'base64').toString('utf8');\n          emailContent = `Subject: ${subject}\\nFrom: ${sender}\\n\\n${decodedContent}`;\n        } catch (e) {\n          console.log('Could not decode multi-part body, using snippet');\n        }\n      }\n    }\n  }\n  \n  // Fallback to snippet if no body content found\n  if (!emailContent || emailContent.length < 50) {\n    emailContent = `Subject: ${subject}\\nFrom: ${sender}\\n\\n${messageData.snippet || 'Email content not available'}`;\n  }\n  \n} else {\n  // Fallback for unexpected data format\n  messageId = 'unknown';\n  subject = 'Gmail Parse Error';\n  sender = 'unknown@gmail.com';\n  emailContent = `Subject: ${subject}\\nFrom: ${sender}\\n\\nError parsing Gmail message data`;\n}\n\nconsole.log('Processed Gmail data:', { \n  messageId, \n  subject, \n  sender, \n  contentLength: emailContent.length \n});\n\nreturn {\n  messageId: messageId,\n  email: emailContent,\n  subject: subject,\n  sender: sender,\n  timestamp: new Date().toISOString(),\n  source: 'gmail'\n};"
       },
       "id": "1ef0e4bb-3ff9-459a-b8ae-74b8214e9a7a",
       "name": "Parse Gmail Message",
@@ -68,34 +66,6 @@
             {
               "name": "sender",
               "value": "={{$json.sender}}"
-            },
-            {
-              "name": "recipient",
-              "value": "={{$json.recipient}}"
-            },
-            {
-              "name": "headers",
-              "value": "={{JSON.stringify($json.headers)}}"
-            },
-            {
-              "name": "attachments",
-              "value": "={{JSON.stringify($json.attachments)}}"
-            },
-            {
-              "name": "size",
-              "value": "={{$json.size}}"
-            },
-            {
-              "name": "messageId",
-              "value": "={{$json.messageId}}"
-            },
-            {
-              "name": "date",
-              "value": "={{$json.date}}"
-            },
-            {
-              "name": "mimeType",
-              "value": "={{$json.mimeType}}"
             }
           ]
         },
@@ -151,6 +121,7 @@
     },
     {
       "parameters": {
+        "resource": "message",
         "operation": "addLabels",
         "messageId": "={{ $('Parse Gmail Message').first().json.messageId }}",
         "labelIds": [
@@ -165,7 +136,6 @@
         240,
         -448
       ],
-      "webhookId": "939f79a9-c31a-40cf-bf6a-bb9301a4518a",
       "credentials": {
         "gmailOAuth2": {
           "id": "SsJuVoSMrBDBhC31",
@@ -175,7 +145,8 @@
     },
     {
       "parameters": {
-        "operation": "addLabels",
+        "resource": "message",
+        "operation": "addLabels", 
         "messageId": "={{ $('Parse Gmail Message').first().json.messageId }}",
         "labelIds": [
           "INBOX"
@@ -189,7 +160,6 @@
         240,
         -256
       ],
-      "webhookId": "0394bc39-c75e-4e10-9a5e-584ec67da1d5",
       "credentials": {
         "gmailOAuth2": {
           "id": "SsJuVoSMrBDBhC31",
@@ -320,7 +290,19 @@
     }
   },
   "pinData": {},
-  "meta": {
-    "instanceId": "d71efd07c31ee3ad26e4f5b948064e8830e3370de6629e631ccf7314be793ab4"
-  }
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-08-23T19:00:00.000Z",
+      "updatedAt": "2025-08-23T19:00:00.000Z", 
+      "id": "gmail-spam-filter",
+      "name": "Gmail Spam Filter"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-08-23T19:00:00.000Z",
+  "versionId": "gmail-v1"
 }

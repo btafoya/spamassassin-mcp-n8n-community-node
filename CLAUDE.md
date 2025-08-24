@@ -11,15 +11,13 @@ You are an expert CLAUDE.md editor. IMPORTANT: If you make any changes that make
 
 3. **Type safety is mandatory** - NEVER use `any` types. If you believe `any` is necessary, PAUSE and request explicit user approval, even in auto-accept mode.
 
-4. **User runs the application** - Unless you are running a QA command, you do not run the app. Always ask the user to run the app and report results back to you.
+4. **Clarify ambiguity** - Favor asking follow-up questions to ensure clear understanding of requirements before implementation.
 
-5. **Clarify ambiguity** - Favor asking follow-up questions to ensure clear understanding of requirements before implementation.
+5. **Preserve existing functionality** - NEVER reduce the scope of existing features/behaviors unless explicitly instructed to do so.
 
-6. **Preserve existing functionality** - NEVER reduce the scope of existing features/behaviors unless explicitly instructed to do so.
+6. **CLAUDE.md as living documentation** - ULTRA CRITICAL: Treat all CLAUDE.md files as living API documentation for your future self. Always check for relevant CLAUDE.md files and update them when changes impact their accuracy.
 
-7. **CLAUDE.md as living documentation** - ULTRA CRITICAL: Treat all CLAUDE.md files as living API documentation for your future self. Always check for relevant CLAUDE.md files and update them when changes impact their accuracy.
-
-8. **Writing expert CLAUDE.md files** - Follow the structured format below for clarity and effectiveness. 
+7. **Writing expert CLAUDE.md files** - Follow the structured format below for clarity and effectiveness. 
 </critical_notes>
 
 <claude_md_best_practices>
@@ -61,37 +59,7 @@ Common patterns with real code examples from the codebase.
 - Gotchas and edge cases
 - Things that will break if done wrong
 </critical_notes>
-```
 
-#### 1. Code Examples
-```typescript
-// BAD: Manual chunking
-processChunk: (ticks: Tick[], size: number) => {
-  const results = [];
-  for (let i = 0; i < ticks.length; i += size) {
-    results.push(ticks.slice(i, i + size).reduce(aggregateOHLCV));
-  }
-  return results;
-}
-
-// GOOD: Stream-based
-processChunk: (ticks: Tick[], size: number) => {
-  return Stream.from(ticks)
-    .batch(size)
-    .map(batch => batch.reduce(aggregateOHLCV))
-    .toArray();
-}
-```
-
-#### 2. Writing Style
-- **Terse but complete**: Every word matters
-- **Present tense**: "Store manages state" not "Store will manage"
-- **Active voice**: "Use this pattern" not "This pattern should be used"
-- **Imperatives for rules**: "MUST", "NEVER", "ALWAYS"
-
-### Advanced Techniques
-#### Chain of Thought
-```markdown
 <workflow>
 ## WORKFLOW
 1. **Find interface** in `/shared/interfaces/market-data-provider.ts`
@@ -99,8 +67,13 @@ processChunk: (ticks: Tick[], size: number) => {
 3. **Create files** implement provider interface and rate limiting per `/integrations/providers/CLAUDE.md`
 </workflow>
 
-
 <Codebase_Conventions>
+
+#### Writing Style
+- **Terse but complete**: Every word matters
+- **Present tense**: "Store manages state" not "Store will manage"
+- **Active voice**: "Use this pattern" not "This pattern should be used"
+- **Imperatives for rules**: "MUST", "NEVER", "ALWAYS"
 
 ## Build/Lint/Test Commands
 - Build: `npm run build`
